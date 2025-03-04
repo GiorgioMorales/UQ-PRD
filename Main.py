@@ -1,7 +1,11 @@
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
 from PREnsemble.Data.DataLoader import DataLoader
 from PREnsemble.EvaluateModel import EvaluateModel
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 if __name__ == '__main__':
     data = DataLoader(name='grT')
