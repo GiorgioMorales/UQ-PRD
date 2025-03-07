@@ -125,6 +125,7 @@ class InputData:
         np.random.seed(7)
         np.random.shuffle(indexes)
         self.X = self.X[indexes]
+        self.Xval = self.Xval[indexes]
         self.n_features = self.X.shape[1]
 
 
@@ -178,9 +179,9 @@ class DataLoader:
 #                                                 overlapping=0.5, variability=0.5, random_state=7)
 #
 # plt.figure(figsize=(6, 6))
-# plt.scatter(data0[:, 0], data0[:, 1], c=labels0, cmap='rainbow', alpha=0.6, edgecolors='k', s=10)
-# plt.xlim(-8, 8)
-# plt.ylim(-8, 8)
+# plt.scatter(data0[:, 0], data0[:, 1], edgecolors='k', s=10)
+# plt.xlim(-6, 6)
+# plt.ylim(-6, 6)
 # plt.gca().set_aspect('equal', adjustable='box')
-# plt.title("Truncated Gaussian Ring Dataset")
+# # plt.title("Truncated Gaussian Ring Dataset")
 # plt.show()

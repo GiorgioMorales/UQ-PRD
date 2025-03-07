@@ -6,12 +6,13 @@ import torch.nn as nn
 def cosine_beta_schedule(timesteps, s=0.008):
     steps = timesteps + 1
     x = np.linspace(0, timesteps, steps, dtype=np.float64)
-    alphas_cumprod0 = np.cos(((x / timesteps) + s) / (1 + s) * np.pi * 0.5)**2
+    alphas_cumprod0 = np.cos(((x / timesteps) + s) / (1 + s) * np.pi * 0.5) ** 2
     alphas_cumprod0 = alphas_cumprod0 / alphas_cumprod0[0]
     betas0 = 1 - (alphas_cumprod0[1:] / alphas_cumprod0[:-1])
     return torch.from_numpy(np.clip(betas0, 0, 0.999)).float()
 
-T = 100 # number of diffusion steps
+
+T = 100  # number of diffusion steps
 
 betas = cosine_beta_schedule(timesteps=T)
 alphas = 1 - betas
@@ -19,7 +20,7 @@ alphas_prod = torch.cumprod(alphas, 0)
 alphas_bar_sqrt = torch.sqrt(alphas_prod)
 one_minus_alphas_bar_log = torch.log(1 - alphas_prod)
 one_minus_alphas_bar_sqrt = torch.sqrt(1 - alphas_prod)
-alphas_cumprod = torch.cumprod(alphas,0)
+alphas_cumprod = torch.cumprod(alphas, 0)
 sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
 sqrt_one_minus_alphas_cumprod = torch.sqrt(1 - sqrt_alphas_cumprod ** 2)
 
@@ -30,6 +31,7 @@ def extract(inputN, t, x):
     reshape = [t.shape[0]] + [1] * (len(shape) - 1)
     return out.reshape(*reshape)
 
+
 # Sampling function
 def forward(x_0, t, noise=None):
     if noise is None:
@@ -38,26 +40,29 @@ def forward(x_0, t, noise=None):
     alphas_1_m_t = one_minus_alphas_bar_sqrt[t]
     return alphas_t * x_0 + alphas_1_m_t * noise
 
+
 def plot_diffusion(x_train):
     import matplotlib.pyplot as plt
     fig, axs = plt.subplots(1, 10, figsize=(28, 3))
     for i in range(10):
         q_i = forward(x_train, torch.tensor([i * 10]))
         axs[i].scatter(q_i[:, 0], q_i[:, 1], s=10)
-        axs[i].set_axis_off(); axs[i].set_title('timestep:'+str(i*10))
+        axs[i].set_axis_off();
+        axs[i].set_title('timestep:' + str(i * 10))
+
 
 def denoise(model, shape):
     x = torch.randn(shape)
     x_seq = [x]
-    for i in range(T-1,-1,-1):
-      idx = torch.tensor([i]).long()
-      eps_factor = (1 - alphas[idx]) / (one_minus_alphas_bar_sqrt[idx])
-      eps_theta = model(x, idx * torch.ones(x.shape[0]).long())
-      mean = torch.sqrt(1 / alphas[idx]) * (x - (eps_factor * eps_theta))
-      z = torch.randn_like(x)
-      sigma_t = torch.sqrt(betas[idx])
-      x = mean + sigma_t * z
-      x_seq.append(x)
+    for i in range(T - 1, -1, -1):
+        idx = torch.tensor([i]).long()
+        eps_factor = (1 - alphas[idx]) / (one_minus_alphas_bar_sqrt[idx])
+        eps_theta = model(x, idx * torch.ones(x.shape[0]).long())
+        mean = torch.sqrt(1 / alphas[idx]) * (x - (eps_factor * eps_theta))
+        z = torch.randn_like(x)
+        sigma_t = torch.sqrt(betas[idx])
+        x = mean + sigma_t * z
+        x_seq.append(x)
     return x_seq
 
 
@@ -92,6 +97,7 @@ def denoise(model, shape):
 
 class TimeEmbedding(nn.Module):
     """Embedding for time step t."""
+
     def __init__(self, emb_dim):
         super().__init__()
         self.mlp = nn.Sequential(
@@ -105,8 +111,10 @@ class TimeEmbedding(nn.Module):
         t = t.float().view(-1, 1)  # Ensure (batch_size, 1) and convert to float
         return self.mlp(t)
 
+
 class ResidualBlock(nn.Module):
     """Residual block with time embedding."""
+
     def __init__(self, d, emb_dim):
         super().__init__()
         self.fc1 = nn.Linear(d, d * 2)
@@ -123,8 +131,10 @@ class ResidualBlock(nn.Module):
         h = self.fc2(h)
         return residual + h  # Residual connection
 
+
 class DenoisingNet(nn.Module):
     """Residual Denoising Network with Time Embedding."""
+
     def __init__(self, h, d, complexity=3, emb_dim=16):
         super().__init__()
         self.complexity = complexity

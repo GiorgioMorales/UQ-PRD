@@ -1,7 +1,4 @@
 import os
-
-import numpy as np
-
 from PREnsemble.utils import *
 from PREnsemble.Models.DDPM import *
 import matplotlib.pyplot as plt
@@ -55,18 +52,21 @@ class EvaluateModel:
             # Compute PR curve
             num_samples = self.X.x.shape[0]
             feats_gen = []
-            batch_size = 1000
-            for start_idx in range(0, num_samples, batch_size):
-                end_idx = min(start_idx + batch_size, num_samples)
-                batch_shape = (end_idx - start_idx, * self.X.x.shape[1:])  # Maintain shape consistency
-                x_seq = denoise(model, batch_shape)
-                feats_gen_batch = x_seq[-1].detach().numpy()
-                feats_gen_batch = feats_gen_batch[np.unique(np.where(~np.isnan(feats_gen_batch))[0]), :]
-                feats_gen.append(feats_gen_batch)
+            batch_size, total_size = 1000, 0
+            while total_size < num_samples:
+                num_gen = num_samples - len(feats_gen)
+                for start_idx in range(0, num_gen, batch_size):
+                    end_idx = min(start_idx + batch_size, num_gen)
+                    batch_shape = (end_idx - start_idx, * self.X.x.shape[1:])  # Maintain shape consistency
+                    x_seq = denoise(model, batch_shape)
+                    feats_gen_batch = x_seq[-1].detach().numpy()
+                    feats_gen_batch = feats_gen_batch[np.unique(np.where(~np.isnan(feats_gen_batch))[0]), :]
+                    feats_gen.append(feats_gen_batch)
+                total_size = len(np.vstack(feats_gen))
             # Concatenate all batches
             feats_gen = np.vstack(feats_gen)
             feats_real = self.dataset.Xval.cpu().detach().numpy()[: len(feats_gen), :]
-            feats_gen = feats_gen[np.unique(np.where(~np.isnan(feats_gen))[0]), :]
+            # feats_gen = feats_gen[np.unique(np.where(~np.isnan(feats_gen))[0]), :]
             prd_data = getPRCurves(methods=['knn'],
                                    real_data=feats_real,
                                    fake_data=feats_gen,
@@ -81,9 +81,13 @@ class EvaluateModel:
                                    )
             # prd_data = compute_prd_from_embedding(feats_real[: len(feats_gen), :], feats_gen)
             total_curves.append((prd_data['knn'][:, 0], prd_data['knn'][:, 1]))
-            # plt.figure()
-            # plt.scatter(feats_real[:, 0], feats_real[:, 1], s=2)
-            # plt.scatter(feats_gen[:, 0], feats_gen[:, 1], s=2)
+            # plt.figure(figsize=(4, 4))
+            # plt.scatter(feats_gen[:, 0], feats_gen[:, 1], alpha=0.2, s=10, label='Generated samples')
+            # plt.scatter(feats_real[:, 0], feats_real[:, 1], alpha=0.1, s=10, label='Real samples')
+            # plt.tight_layout()
+            # plt.legend()
+            # plt.xlim(-6.5, 6.5)
+            # plt.ylim(-6.5, 6.5)
             # plt.show()
 
         # Define a common recall grid
@@ -107,11 +111,7 @@ class EvaluateModel:
 
         # Plot the aggregated PR curves
         plt.figure()
-        # for idx, pv in enumerate(interpolated_precisions):
-        #     plt.plot(common_recall, pv)
         plt.plot(common_recall, mean_precision, color='blue', label="Mean PR Curve", linewidth=3)
-        # plt.fill_between(common_recall, mean_precision - std_precision, mean_precision + std_precision,
-        #                  color='blue', alpha=0.2, label="Variance")
         plt.fill_between(common_recall, lower_bound, upper_bound, color='blue', alpha=0.2,
                          label="80% Confidence Interval")
         plt.xlabel("Recall")
@@ -121,7 +121,7 @@ class EvaluateModel:
         plt.grid(True)
         plt.show()
         suffix = "-Dataset_" + self.dataset.name + "-Complexity_" + str(self.complexity)
-        plt.savefig("Results//precision_recall_curve" + suffix + ".jpg", dpi=1200)
+        plt.savefig("Results//precision_recall_curve" + suffix + ".jpg", dpi=600)
         # Save mean and standard deviation curves as npy files
         np.save("Results//mean_precision" + suffix + ".npy", mean_precision)
         np.save("Results//std_precision" + suffix + ".npy", std_precision)
@@ -130,5 +130,5 @@ class EvaluateModel:
 
 if __name__ == '__main__':
     data = DataLoader(name='grT')
-    emodel = EvaluateModel(dataset=data.dataset, complexity=8)
+    emodel = EvaluateModel(dataset=data.dataset, complexity=4)
     emodel.eval_ensemble(ensemble_size=30)

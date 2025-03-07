@@ -4,7 +4,7 @@ from sklearn.metrics import confusion_matrix
 import numpy as np
 import sys
 
-DASHES = "#"*12
+DASHES = "#" * 12
 
 
 def compute_fpr_fnr(true_labels, predicted_labels):
@@ -26,30 +26,32 @@ def compute_fpr_fnr(true_labels, predicted_labels):
         fpr: float false positive rate
         fnr: float false negative rate
     """
-    if not isinstance(true_labels,np.ndarray):
-        true_labels=np.array(true_labels)
-    if not isinstance(predicted_labels,np.ndarray):
-        predicted_labels=np.array(predicted_labels)
-        
-    true_labels = true_labels[np.newaxis,:,np.newaxis]
-    
-    if np.sum(true_labels)==0:
+    if not isinstance(true_labels, np.ndarray):
+        true_labels = np.array(true_labels)
+    if not isinstance(predicted_labels, np.ndarray):
+        predicted_labels = np.array(predicted_labels)
+
+    true_labels = true_labels[np.newaxis, :, np.newaxis]
+
+    if np.sum(true_labels) == 0:
         fpr = 0
     else:
-        fpr = np.sum(true_labels*(1-predicted_labels),axis=1)/(np.sum(true_labels))
-    if np.sum(1-true_labels)==0:
+        fpr = np.sum(true_labels * (1 - predicted_labels), axis=1) / (np.sum(true_labels))
+    if np.sum(1 - true_labels) == 0:
         fnr = 0
     else:
-        fnr = np.sum((1-true_labels)*(predicted_labels),axis=1)/(np.sum(1-true_labels))
+        fnr = np.sum((1 - true_labels) * (predicted_labels), axis=1) / (np.sum(1 - true_labels))
     return fpr, fnr
 
+
 def get_angles(num_angles=100, epsilon=1e-10):
-    if not (epsilon > 0 and epsilon < 0.1):
+    if not (0 < epsilon < 0.1):
         raise ValueError("epsilon must be in (0, 0.1] but is %s." % str(epsilon))
-    if not (num_angles >= 3 and num_angles <= 1e6):
+    if not (3 <= num_angles <= 1e6):
         raise ValueError("num_angles must be in [3, 1e6] but is %d." % num_angles)
     angles = np.linspace(epsilon, np.pi / 2 - epsilon, num=num_angles)
     return angles
+
 
 def get_slopes(num_angles=100, epsilon=1e-10):
     """
@@ -63,13 +65,14 @@ def get_slopes(num_angles=100, epsilon=1e-10):
     Returns:
         slopes: array of values of lambda
     """
-    
-    angles = get_angles(num_angles,epsilon)
+
+    angles = get_angles(num_angles, epsilon)
     # Compute slopes for linearly spaced angles between [0, pi/2]
     slopes = np.tan(angles)
-    slopes = np.concatenate([[0],slopes,[np.inf]])
+    slopes = np.concatenate([[0], slopes, [np.inf]])
 
     return slopes
+
 
 def get_arg_mins(array, axis=None):
     """
@@ -77,6 +80,7 @@ def get_arg_mins(array, axis=None):
     """
     min_val = np.min(array, axis=axis)
     return np.where(array == min_val)
+
 
 def truncate_gaussian(samples, n0):
     """return truncation of gaussian : values are between -n0 and +n0
@@ -91,27 +95,31 @@ def truncate_gaussian(samples, n0):
     truncated_samples = np.where(np.abs(samples) <= n0, samples, n0 * np.sign(samples))
     return truncated_samples
 
-def interpolate(alphas,betas,nb_points=None):
+
+def interpolate(alphas, betas, nb_points=None):
     """interpolate alphas and betas from the radial version of alphas and betas"""
     if not nb_points:
         nb_points = len(alphas)
-    beta_interp = np.linspace(0,1,num=nb_points)
+    beta_interp = np.linspace(0, 1, num=nb_points)
     # NOTE: alphas and betas must be reverted, as x axis is the beta which is decreasing
     # as it is \lambda for lamda range in (0,+\infty) goes from right to left
-    alpha_interp = np.interp(beta_interp,betas[::-1],alphas[::-1])
-    return alpha_interp,beta_interp
+    alpha_interp = np.interp(beta_interp, betas[::-1], alphas[::-1])
+    return alpha_interp, beta_interp
 
-def intersection(alphas_1,alphas_2,x):
-    assert len(alphas_1)==len(alphas_2)
-    mini = np.minimum(alphas_1,alphas_2)
-    return np.trapz(mini,x)
 
-def union(alphas_1,alphas_2,x):
-    assert len(alphas_1)==len(alphas_2)
-    maxi = np.maximum(alphas_1,alphas_2)
-    return np.trapz(maxi,x)
+def intersection(alphas_1, alphas_2, x):
+    assert len(alphas_1) == len(alphas_2)
+    mini = np.minimum(alphas_1, alphas_2)
+    return np.trapz(mini, x)
 
-def iou_score(alphas_1,alphas_2,x):
+
+def union(alphas_1, alphas_2, x):
+    assert len(alphas_1) == len(alphas_2)
+    maxi = np.maximum(alphas_1, alphas_2)
+    return np.trapz(maxi, x)
+
+
+def iou_score(alphas_1, alphas_2, x):
     """
     intersection over union score
     make sure that len(alphas_1)==len(alphas_2)!
@@ -125,7 +133,8 @@ def iou_score(alphas_1,alphas_2,x):
     score = iou_score(alphas_knn_interp,alphas_gt_interp,x)
     print(score)
     """
-    return intersection(alphas_1,alphas_2,x)/union(alphas_1,alphas_2,x)
+    return intersection(alphas_1, alphas_2, x) / union(alphas_1, alphas_2, x)
+
 
 class PrintColors:
     HEADER = '\033[95m'
@@ -137,16 +146,18 @@ class PrintColors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-    
+
+
 def colored_print(message, color):
     print(f"{color}{message}{PrintColors.ENDC}")
-    
+
 
 def print_colored_text(text, color=PrintColors.BOLD):
     colored_print(f"\n\n{DASHES} {text} {DASHES}", color)
 
+
 def print_to_file(message, file_name="/home/2024032/bsykes02/improved-ipr/tmp/output_log_file.txt"):
-    with open(file_name,"a") as f:
+    with open(file_name, "a") as f:
         f.write(f"{message}\n")
 
 
