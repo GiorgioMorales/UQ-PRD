@@ -35,7 +35,7 @@ To retrain the diffusion models, use the `src/TrainModel.py` file.
 
 ```python
 from PREnsemble.Data.DataLoader import DataLoader
-from PREnsemble.EvaluateModel2 import TrainModel
+from PREnsemble.EvaluateModel import TrainModel
 
 if __name__ == '__main__':
     c = 4
