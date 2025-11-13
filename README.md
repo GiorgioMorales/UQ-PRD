@@ -16,7 +16,7 @@ The Python file used to reproduce the plots reported in our paper is `Main.py`.
 
 ```python
 from PREnsemble.Data.DataLoader import DataLoader
-from PREnsemble.EvaluateModel2 import EvaluateModel
+from PREnsemble.EvaluateModel import EvaluateModel
 
 if __name__ == '__main__':
     data = DataLoader(name='grT')
