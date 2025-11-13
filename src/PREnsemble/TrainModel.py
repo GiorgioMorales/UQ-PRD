@@ -20,7 +20,7 @@ class MyDataset(Dataset):
 
 
 class TrainModel:
-    def __init__(self, dataset=InputData, modelType='DDPM', complexity=1, verbose=False, plotR=False):
+    def __init__(self, dataset=InputData, modelType='DDPM', complexity=1, verbose=False, plotR=False, suffix=None):
         self.modelType = modelType
         self.complexity = complexity
         self.dataset = dataset
@@ -28,6 +28,9 @@ class TrainModel:
         self.model = self.reset_model()
         self.verbose = verbose
         self.plot = plotR
+        self.suffix = ''
+        if suffix is not None:
+            self.suffix = '_' + suffix
 
     def reset_model(self):
         h = 2
@@ -76,29 +79,28 @@ class TrainModel:
             epochs = 20001
 
         for mi in range(ensemble_size):
-            if mi == 21:
-                filepath = folder + "//Model-" + self.dataset.name
-                filepath = [filepath] * ensemble_size
-                filepath[mi] = filepath[mi] + "-Instance" + str(mi) + '.pth'
-                f = filepath[mi]
-                # Train the model
-                self.model = self.reset_model()
-                print("\tTraining ", mi + 1, "/", ensemble_size, " model")
-                self.train(epochs, f)
-                # Plot results
-                if self.plot:
-                    x_seq = denoise(self.model, self.X.x.shape)
-                    plt.figure()
-                    cur_x = x_seq[-1].detach()
-                    plt.scatter(feats_real[:, 0], feats_real[:, 1], s=2)
-                    plt.scatter(cur_x[:, 0], cur_x[:, 1], s=2)
-                    plt.show()
+            filepath = folder + "//Model-" + self.dataset.name
+            filepath = [filepath] * ensemble_size
+            filepath[mi] = filepath[mi] + "-Instance" + str(mi) + self.suffix + '.pth'
+            f = filepath[mi]
+            # Train the model
+            self.model = self.reset_model()
+            print("\tTraining ", mi + 1, "/", ensemble_size, " model")
+            self.train(epochs, f)
+            # Plot results
+            if self.plot:
+                x_seq = denoise(self.model, self.X.x.shape)
+                plt.figure()
+                cur_x = x_seq[-1].detach()
+                plt.scatter(feats_real[:, 0], feats_real[:, 1], s=2)
+                plt.scatter(cur_x[:, 0], cur_x[:, 1], s=2)
+                plt.show()
 
 
 if __name__ == '__main__':
     complexities = [4]
     for c in complexities:
         print("Training ensemble of models of complexity ", c)
-        data = DataLoader(name='grT')
-        model = TrainModel(dataset=data.dataset, complexity=c, plotR=True)
+        data = DataLoader(name='grT', n=2500)
+        model = TrainModel(dataset=data.dataset, complexity=c, plotR=False, suffix=str(len(data.X)))
         model.train_ensemble(ensemble_size=30)

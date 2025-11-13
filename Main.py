@@ -9,5 +9,5 @@ from PREnsemble.EvaluateModel2 import EvaluateModel
 
 if __name__ == '__main__':
     data = DataLoader(name='grT')
-    emodel = EvaluateModel(dataset=data.dataset, complexity=8)
+    emodel = EvaluateModel(dataset=data.dataset, complexity=8)  # Complexity: 1, 2, 4, or 8
     emodel.eval_ensemble(ensemble_size=30)

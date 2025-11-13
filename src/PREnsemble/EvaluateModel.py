@@ -24,11 +24,14 @@ class MyDataset(Dataset):
 
 
 class EvaluateModel:
-    def __init__(self, dataset=InputData, modelType='DDPM', complexity=1):
+    def __init__(self, dataset=InputData, modelType='DDPM', complexity=1, suffix=None):
         self.modelType = modelType
         self.complexity = complexity
         self.dataset = dataset
         self.X = MyDataset(self.dataset.X)
+        self.suffix = ''
+        if suffix is not None:
+            self.suffix = '_' + suffix
 
     def eval_ensemble(self, ensemble_size=10):
         # If the folder does not exist, create it
@@ -43,10 +46,10 @@ class EvaluateModel:
         # Define path where the model will be saved
         total_curves = []
         for mi in range(ensemble_size):
-            print(mi)
+            print("Model ", mi)
             filepath = folder + "//Model-" + self.dataset.name
             filepath = [filepath] * ensemble_size
-            filepath[mi] = filepath[mi] + "-Instance" + str(mi) + '.pth'
+            filepath[mi] = filepath[mi] + "-Instance" + str(mi) + self.suffix + '.pth'
             # Load the model
             model = torch.load(filepath[mi])
             # Compute PR curve
@@ -57,7 +60,7 @@ class EvaluateModel:
                 num_gen = num_samples - len(feats_gen)
                 for start_idx in range(0, num_gen, batch_size):
                     end_idx = min(start_idx + batch_size, num_gen)
-                    batch_shape = (end_idx - start_idx, * self.X.x.shape[1:])  # Maintain shape consistency
+                    batch_shape = (end_idx - start_idx, *self.X.x.shape[1:])  # Maintain shape consistency
                     x_seq = denoise(model, batch_shape)
                     feats_gen_batch = x_seq[-1].detach().numpy()
                     feats_gen_batch = feats_gen_batch[np.unique(np.where(~np.isnan(feats_gen_batch))[0]), :]
@@ -66,20 +69,18 @@ class EvaluateModel:
             # Concatenate all batches
             feats_gen = np.vstack(feats_gen)
             feats_real = self.dataset.Xval.cpu().detach().numpy()[: len(feats_gen), :]
-            # feats_gen = feats_gen[np.unique(np.where(~np.isnan(feats_gen))[0]), :]
-            prd_data = getPRCurves(methods=['knn'],
-                                   real_data=feats_real,
-                                   fake_data=feats_gen,
-                                   num_samples=len(feats_real),
-                                   split_train_test_ratio=0.5,
-                                   number_angles=200,
-                                   nearest_k=int(np.sqrt(len(feats_real))),
-                                   output_folder='Results//' + "Curves-Dataset_" + self.dataset.name +
-                                                 "-Complexity_" + str(self.complexity) + "-Iteration_" + str(mi),
-                                   device='cpu',
-                                   c_dist_approx=True,
-                                   )
-            # prd_data = compute_prd_from_embedding(feats_real[: len(feats_gen), :], feats_gen)
+            prd_data, slopes = getPRCurves(methods=['knn'],
+                                           real_data=feats_real,
+                                           fake_data=feats_gen,
+                                           num_samples=len(feats_real),
+                                           split_train_test_ratio=0.5,
+                                           number_angles=200,
+                                           nearest_k=int(np.sqrt(len(feats_real))),
+                                           output_folder='Results//' + "Curves-Dataset_" + self.dataset.name +
+                                                         "-Complexity_" + str(self.complexity) + "-Iteration_" + str(mi),
+                                           device='cpu',
+                                           c_dist_approx=True,
+                                           )
             total_curves.append((prd_data['knn'][:, 0], prd_data['knn'][:, 1]))
             # plt.figure(figsize=(4, 4))
             # plt.scatter(feats_gen[:, 0], feats_gen[:, 1], alpha=0.2, s=10, label='Generated samples')
@@ -103,7 +104,6 @@ class EvaluateModel:
 
         interpolated_precisions = np.array(interpolated_precisions)
         mean_precision = np.mean(interpolated_precisions, axis=0)
-        std_precision = np.std(interpolated_precisions, axis=0)
 
         # Compute the 10th and 90th percentiles
         lower_bound = np.percentile(interpolated_precisions, 10, axis=0)
@@ -120,15 +120,15 @@ class EvaluateModel:
         plt.legend()
         plt.grid(True)
         plt.show()
-        suffix = "-Dataset_" + self.dataset.name + "-Complexity_" + str(self.complexity)
-        plt.savefig("Results//precision_recall_curve" + suffix + ".jpg", dpi=600)
-        # Save mean and standard deviation curves as npy files
-        np.save("Results//mean_precision" + suffix + ".npy", mean_precision)
-        np.save("Results//std_precision" + suffix + ".npy", std_precision)
-        np.save("Results//recalls" + suffix + ".npy", common_recall)
+        # suffix = "-Dataset_" + self.dataset.name + "-Complexity_" + str(self.complexity)
+        # plt.savefig("Results//precision_recall_curve" + suffix + ".jpg", dpi=600)
+        # # Save mean and standard deviation curves as npy files
+        # np.save("Results//mean_precision" + suffix + ".npy", mean_precision)
+        # np.save("Results//std_precision" + suffix + ".npy", std_precision)
+        # np.save("Results//recalls" + suffix + ".npy", common_recall)
 
 
 if __name__ == '__main__':
-    data = DataLoader(name='grT')
-    emodel = EvaluateModel(dataset=data.dataset, complexity=4)
+    data = DataLoader(name='grT', n=7500)
+    emodel = EvaluateModel(dataset=data.dataset, complexity=4, suffix=str(len(data.X)))
     emodel.eval_ensemble(ensemble_size=30)

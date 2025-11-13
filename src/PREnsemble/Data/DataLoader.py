@@ -132,18 +132,19 @@ class InputData:
 class DataLoader:
     """Class used to load or generate datasets"""
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, n=10000):
         """
         Initialize DataLoader class
         :param name: Dataset name (If known, otherwise create a new temporal dataset)
         """
         self.X, self.Xval, self.Y, self.names = np.zeros(0), np.zeros(0), np.zeros(0), None
         self.name = name
+        self.n = n
 
         self.modelType = "NN"
         if hasattr(self, f'{name}'):
             method = getattr(self, f'{name}')
-            method()
+            method(self.n)
         else:
             sys.exit('The provided dataset name does not exist')
 
@@ -158,30 +159,30 @@ class DataLoader:
         srx = torch.tensor(X, dtype=torch.float)
         self.Xval = torch.cat((srx[:, 0].reshape(-1, 1), srx[:, 2].reshape(-1, 1)), 1) / 10
 
-    def gr(self, n=10000):  # Swiss roll
+    def gr(self, n=10000):
         np.random.seed(7)
         X, _ = generate_gaussian_ring(num_clusters=8, n=n, radius=5, overlapping=0.5, random_state=7)
         self.X = torch.tensor(X, dtype=torch.float)
         X, _ = generate_gaussian_ring(num_clusters=8, n=n, radius=5, overlapping=0.5, random_state=3)
         self.Xval = torch.tensor(X, dtype=torch.float)
 
-    def grT(self, n=10000):  # Swiss roll
+    def grT(self, n=10000):
         np.random.seed(7)
         X, _, train_params = generate_truncated_gaussian_ring(num_clusters=8, n=n, radius=5, overlapping=0.5,
                                                               variability=0.5, random_state=7)
         self.X = torch.tensor(X, dtype=torch.float)
-        X, _, _ = generate_truncated_gaussian_ring(cluster_params=train_params, random_state=3)
+        X, _, _ = generate_truncated_gaussian_ring(num_clusters=8, n=n, cluster_params=train_params, random_state=3)
         self.Xval = torch.tensor(X, dtype=torch.float)
 
 
-# import matplotlib.pyplot as plt
-# data0, labels0, tr_params = generate_truncated_gaussian_ring(num_clusters=8, n=10000, radius=5,
-#                                                 overlapping=0.5, variability=0.5, random_state=7)
-#
-# plt.figure(figsize=(6, 6))
-# plt.scatter(data0[:, 0], data0[:, 1], edgecolors='k', s=10)
-# plt.xlim(-6, 6)
-# plt.ylim(-6, 6)
-# plt.gca().set_aspect('equal', adjustable='box')
-# # plt.title("Truncated Gaussian Ring Dataset")
-# plt.show()
+import matplotlib.pyplot as plt
+data0, labels0, tr_params = generate_truncated_gaussian_ring(num_clusters=8, n=10000, radius=5,
+                                                overlapping=0.5, variability=0.5, random_state=7)
+
+plt.figure(figsize=(6, 6))
+plt.scatter(data0[:, 0], data0[:, 1], edgecolors='k', s=10)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+plt.gca().set_aspect('equal', adjustable='box')
+# plt.title("Truncated Gaussian Ring Dataset")
+plt.show()

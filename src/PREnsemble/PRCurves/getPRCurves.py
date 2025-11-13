@@ -9,7 +9,6 @@ from PREnsemble.PRCurves.iipr import get_prd, DistanceMatrix
 from PREnsemble.PRCurves.exp_utils import get_classifiers, split_all_data
 from PREnsemble.PRCurves.scores import get_extreme_values, prd_to_median_pair, prd_to_max_f_beta_pair, prd_to_auc
 
-
 """
 Create Precision and Recall curves based on .npy files of embeddings
 
@@ -85,7 +84,7 @@ def get_prd_real_data(distance_matrix,
         classifiers=classifiers,
     )
 
-    return alphas_betas, arguments_dict
+    return alphas_betas, arguments_dict, slopes
 
 
 def open_embedding(embedding_file_path):
@@ -165,18 +164,19 @@ def getPRCurves(methods,
     # idx_real_samples_train, idx_real_samples_test, idx_fake_samples_train, idx_fake_samples_test = \
     #     all_real_indices[0:int(len(num_real) / 2)], all_fake_indices[0:int(len(num_real) / 2)], \
     #     all_real_indices[int(len(num_real) / 2):], all_fake_indices[int(len(num_real) / 2):],
+    slopes = None
     for method in methods:
         print(f"##################### Running on method {method} #####################\n\n")
         argss["method"] = method
 
-        alphas_betas, arguments_dict = get_prd_real_data(distance_matrix=distance_matrix,
-                                                         idx_fake_samples_test=idx_fake_samples_test,
-                                                         idx_fake_samples_train=idx_fake_samples_train,
-                                                         idx_real_samples_test=idx_real_samples_test,
-                                                         idx_real_samples_train=idx_real_samples_train,
-                                                         number_angles=number_angles,
-                                                         nearest_k=nearest_k,
-                                                         method=method)
+        alphas_betas, arguments_dict, slopes = get_prd_real_data(distance_matrix=distance_matrix,
+                                                                 idx_fake_samples_test=idx_fake_samples_test,
+                                                                 idx_fake_samples_train=idx_fake_samples_train,
+                                                                 idx_real_samples_test=idx_real_samples_test,
+                                                                 idx_real_samples_train=idx_real_samples_train,
+                                                                 number_angles=number_angles,
+                                                                 nearest_k=nearest_k,
+                                                                 method=method)
         dict_PRD[method] = alphas_betas
         ##########################################################
         # COMPUTE SCALAR METRICS
@@ -207,8 +207,7 @@ def getPRCurves(methods,
 
     with open(os.path.join(output_folder, f"metrics_{output_file_desc}.json"), "w") as f:
         json.dump(metrics, f)
-    return dict_PRD
-
+    return dict_PRD, slopes
 
 # if __name__ == "__main__":
 #     args = parse_args()
